@@ -1,0 +1,327 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <meta name="author" content="Gabriel Béna Department of Electrical and Electronic Engineering Imperial College London London, UK g.bena21@imperial.ac.uk " />
+  <meta name="author" content="Dan F. M. Goodman Department of Electrical and Electronic Engineering Imperial College London London, UK d.goodman@imperial.ac.uk " />
+  <title>Extreme sparsity gives rise to functional specialization</title>  
+
+  <link rel="stylesheet" href="threecolumnfixed.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+  <!--[if lt IE 9]>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
+  <![endif]-->
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
+
+  <script src="https://unpkg.com/@popperjs/core@2/dist/umd/popper.min.js"></script>
+  <script src="https://unpkg.com/tippy.js@6/dist/tippy-bundle.umd.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/tippy.js@6/themes/light-border.css"/>
+</head>
+
+<body>
+        
+    <div class="row">
+        <div class="column_container">
+            <div class="column_header">
+                <b>MAIN CONTENT</b><br/>
+                &nbsp;
+            </div>
+            <div id="colMain" class="column">
+                                <header id="title-block-header">
+                <h1 class="title">Extreme sparsity gives rise to functional specialization</h1>
+                                                <p class="author">Gabriel Béna<br />
+Department of Electrical and Electronic Engineering<br />
+Imperial College London<br />
+London, UK<br />
+<code>g.bena21@imperial.ac.uk</code><br /></p>
+                                <p class="author">Dan F. M. Goodman<br />
+Department of Electrical and Electronic Engineering<br />
+Imperial College London<br />
+London, UK<br />
+<code>d.goodman@imperial.ac.uk</code><br /></p>
+                                                </header>
+                                                <div id="abstract">
+                    <b>Abstract.</b><br/>
+                    <p>Modularity of neural networks – both biological and artificial – can be thought of either structurally or functionally, and the relationship between these is an open question. We show that enforcing structural modularity via sparse connectivity between two dense sub-networks which need to communicate to solve the task leads to functional specialization of the sub-networks, but only at extreme levels of sparsity. With even a moderate number of interconnections, the sub-networks become functionally entangled. Defining functional specialization is in itself a challenging problem without a universally agreed solution. To address this, we designed three different measures of specialization (based on weight masks, retraining and correlation) and found them to qualitatively agree. Our results have implications in both neuroscience and machine learning. For neuroscience, it shows that we cannot conclude that there is functional modularity simply by observing moderate levels of structural modularity: knowing the brain’s connectome is not sufficient for understanding how it breaks down into functional modules. For machine learning, using structure to promote functional modularity – which may be important for robustness and generalization – may require extremely narrow bottlenecks between modules.</p>
+                </div>
+                                                <h1 id="introduction">Introduction</h1>
+                                                <p>Modularity of neural networks is a bit like the notion of beauty in art: everyone agrees that it’s important, but nobody can say exactly what it means. Modularity has been widely observed in the brain <span class="citation" data-cites="mountcastle_columnar_1997 sporns_human_2005 chen_revealing_2008 meunier_age-related_2009">(Mountcastle 1997; Sporns, Tononi, and Kötter 2005; Chen et al. 2008; Meunier et al. 2009)</span>, suggested to be important in evolution <span class="citation" data-cites="redies_modularity_2001 Clune_2013 kashtan_spontaneous_2005">(Redies and Puelles 2001; Clune, Mouret, and Lipson 2013; Kashtan and Alon 2005)</span> and learning <span class="citation" data-cites="ellefsen_neural_2015">(Ellefsen, Mouret, and Clune 2015)</span>, and found in trained artificial neural networks <span class="citation" data-cites="filan_clusterability_2021">(Filan et al. 2021)</span>. One definition is that a network is modular if it can be broken down into composable subnetworks that can operate independently <span class="citation" data-cites="Amer_2019">(Amer and Maul 2019)</span>. This definition has a structural and functional component. Structural, because we partition neurons in the network into different modules. Functional, because these modules are then required to carry out independent functions.</p>
+                                                <p>Structural notions of modularity can be easily measured by constructing a graph of neurons as nodes and synapses as edges <span class="citation" data-cites="bullmore_brain_2011">(Bullmore and Bassett 2011)</span>, for example the <span class="math inline">\(Q\)</span> modularity measure of how many edges are within modules compared to between modules <span class="citation" data-cites="Newman_2006">(Newman 2006)</span>. Functional measures of modularity are much less straightforward. How can you quantitatively measure whether a sub-network is independent or composable? Do different proposed measures of functional modularity agree? Do they agree with a structural measure?</p>
+                                                <p>We investigate these questions with a simple network architecture and set of tasks designed to allow us to control the degree of structural modularity. We then compare different measures of functional specialization of these modules to certain sub-tasks. Reassuringly, we find that the three functional measures qualitatively agree. However, we also find that only extreme levels of structural modularity give rise to functional modularity. These results can serve as a guideline for the design of artificial neural networks that want to introduce functional modularity. However, they may also pose difficulties for the interpretation of biological, connectomic data, since our results imply that even relatively strong structural modularity may have no functional bearing <span class="citation" data-cites="sporns_human_2005">(Sporns, Tononi, and Kötter 2005)</span>.</p>
+                                                <p>We describe the architecture and tasks in <a href="#sec:arch-tasks" data-reference-type="ref" data-reference="sec:arch-tasks">2</a>, the measures of functional specialization in <a href="#sec:measures" data-reference-type="ref" data-reference="sec:measures">3</a>, and the results of our experiments in <a href="#sec:results" data-reference-type="ref" data-reference="sec:results">4</a>. We discuss the implications and limitations of these results in <a href="#sec:discussion" data-reference-type="ref" data-reference="sec:discussion">5</a>.</p>
+                                                <h1 id="sec:arch-tasks">Architecture and tasks</h1>
+                                                <p>Our approach to investigating the relationship between structural and functional modularity is to explicitly design a network with a controllable degree of structural modularity. We then train it on a task designed to be composed of clearly defined sub-tasks, and measure the degree of functional modularity in the trained network. The simplest possible network that could be described as modular would have only two modules. Therefore, our architecture consists of two sub-networks, each one being densely and recurrently connected. We add sparse interconnections between neurons in these two sub-networks, with a degree of sparsity ranging from a single connection in each direction between the sub-networks, right up to dense inter-connectivity. With dense inter-connectivity, the network ceases to be structurally modular as every neuron is connected to every other neuron. Each sub-network receives an MNIST digit <span class="citation" data-cites="lecun-mnisthandwrittendigit-2010">(LeCun and Cortes 2010)</span> as input, and the task is to return one digit or the other depending on whether the parity of the two digits is the same or different. With this task, the two networks are required to communicate, but are able to specialize in recognizing their own digit because it is sufficient to communicate only the parity of their own digit to the other sub-network.</p>
+                                                <p>In this section we describe the architecture, tasks and training in more detail. In <a href="#sec:measures" data-reference-type="ref" data-reference="sec:measures">3</a> we describe the measures of functional modularity.</p>
+                                                <h2 id="tasks">Tasks</h2>
+                                                <p>We designed a nested task to allow us to measure functional specialization of sub-networks.</p>
+                                                <p>Sub-network <span class="math inline">\(j\)</span> receives as input an instance of digit <span class="math inline">\(D_j \in \left\{0, ..., 9\right\}\)</span>. We define the parity difference as <span class="math inline">\(P=(D_0+D_1)\bmod 2\)</span>. The value of <span class="math inline">\(P\)</span> is 0 if the parity of the two digits is the same, or 1 if it is different. The network needs to return digit 0 if the parity is the same, or digit 1 if different. Solving this task requires only communicating a single parity bit between the sub-networks. <span class="math display">\[\label{eq:parity-difference-task}
+                                                    \mathrm{Target}=PD_0+(1-P)D_1\]</span></p>
+                                                <p>The sub-tasks are to predict only one of the input digits. <span class="math display">\[\label{eq:sub-task}
+                                                    \mathrm{Target}_k=D_k, \quad k \in \left\{0, 1\right\}\]</span></p>
+                                                <p>Note that we exclude the case <span class="math inline">\(D_0=D_1\)</span> because the target is then ambiguous. This case has parity difference <span class="math inline">\(P=0\)</span>. To resolve the imbalance in the distribution of parity differences, we also exclude one case where the parity difference is <span class="math inline">\(P=1\)</span> by requiring <span class="math inline">\(D_1-D_0\bmod 10\neq 1\)</span>. We combine these two exclusions by requiring that <span class="math inline">\((D_1-D_0)\bmod 10\not\in\{0,1\}\)</span>.</p>
+                                                <h2 id="architectures">Architectures</h2>
+                                                <p>The network consists of two dense recurrent sub-networks each receiving their own separate input, with sparse connections between the two sub-networks (<a href="#fig:archi" data-reference-type="ref" data-reference="fig:archi">1</a>). Each sub-network <span class="math inline">\(n \in \left\{0, 1\right\}\)</span> is composed of a single hidden layer <span class="math inline">\(\textbf{h}^{(n)}\)</span> of <span class="math inline">\(N=100\)</span> neurons, receiving input through weights <span class="math inline">\(W^{(n)}_{ih}\)</span> and bias <span class="math inline">\(\beta^{(n)}_{ih}\)</span> and recurrently connected through weights <span class="math inline">\(W^{(n)}_{hh}\)</span> and bias <span class="math inline">\(\beta^{(n)}_{hh}\)</span>. The two sub-networks are then connected through sparse weights <span class="math inline">\(W_{sparse}^{0\xrightarrow{}1}\)</span>, <span class="math inline">\(W_{sparse}^{1\xrightarrow{}0}\)</span>.</p>
+                                                <p><span id="fig:architecture" label="fig:architecture">[fig:architecture]</span></p>
+                                                <figure>
+                                                <img src="imgs/Architecture.jpg" id="fig:archi" alt="Standard Architecture" /><figcaption aria-hidden="true">Standard Architecture</figcaption>
+                                                </figure>
+                                                <figure>
+                                                <img src="imgs/Architecture_BN.jpg" id="fig:bottleneck-archi" alt="Bottleneck Architecture" /><figcaption aria-hidden="true">Bottleneck Architecture</figcaption>
+                                                </figure>
+                                                <p>The digits are presented for <span class="math inline">\(T=5\)</span> time steps. Each sub-network is presented with an input <span class="math inline">\(x^{(n)}\)</span>. We write <span class="math inline">\(m=1-n\)</span> to be the index of the other sub-network. The hidden state <span class="math inline">\(h_t^{(n)}\)</span> of sub-network <span class="math inline">\(n \in \left\{0, 1\right\}\)</span> at time-step <span class="math inline">\(t\)</span> is then: <span class="math display">\[h_t^{(n)} = \tanh\left( W^{(n)}_{ih} x^{(n)} + \beta^{(n)}_{ih} + W^{(n)}_{hh} h_{t-1}^{(n)} + \beta^{(n)}_{hh} + W_{sparse}^{m\xrightarrow{}n}h_{t-1}^{(m)} \right).\]</span></p>
+                                                <p>Note that this formulation could be easily adapted for other types of sub-networks like LSTMs <span class="citation" data-cites="sak2014long">(Sak, Senior, and Beaufays 2014)</span> or leaky RNN cells.</p>
+                                                <p>Each sub-network is densely connected to a readout layer <span class="math inline">\(\mathbf{r}^{(n)}\)</span> through weights <span class="math inline">\(W^{(n)}_{hr}\)</span> and bias <span class="math inline">\(\beta^{(n)}_{hr}\)</span>: <span class="math display">\[\mathbf{r}^{(n)}=W^{(n)}_{hr}\mathbf{h}^{(n)}_T+\beta^{(n)}_{hr}.\]</span> Given the two readouts layer, we compute the actual decision of the global model using a competitive <em>max</em> decision. For each input sample, the sub-network with the highest “certainty” (largest value) takes the decision. The output layer of the whole network <span class="math inline">\(\mathbf{r}^{out}\)</span> is defined to be the output layer of the sub-network with the largest maximum value. Let the index of this sub-network be <span class="math display">\[\mu=\mathop{\mathrm{argmax}}_n \max \mathbf{r}^{(n)}.\]</span> Then the output layer is defined to be <span class="math display">\[\mathbf{r}^{out}=\mathbf{r}^{(\mu)}.\]</span> The prediction of the network is then <span class="math display">\[d^{out}=\mathop{\mathrm{argmax}}\mathbf{r}^{out}.\]</span></p>
+                                                <p>We use this architecture for the majority of the results shown. For one of the functional modularity measures, we introduce an additional bottleneck layer <span class="math inline">\(\mathbf{b}^{(n)}\)</span> in each sub-network . This bottleneck is composed of an extra, small hidden layer of 5 neurons between the sub-network and the readout (<a href="#fig:bottleneck-archi" data-reference-type="ref" data-reference="fig:bottleneck-archi">2</a>). In that case, the connection from state to output decomposes in weight matrices <span class="math inline">\(W^{(n)}_{hb}\)</span>, <span class="math inline">\(W^{(n)}_{br}\)</span> and biases <span class="math inline">\(\beta^{(n)}_{hb}\)</span>, <span class="math inline">\(\beta^{(n)}_{br}\)</span>, and the equations become: <span class="math display">\[\begin{aligned}
+                                                    \mathbf{b}^{(n)}&amp;=W^{(n)}_{hb}\mathbf{h}^{(n)}_T+\beta^{(n)}_{hb} \\
+                                                    \mathbf{r}^{(n)}&amp;=W^{(n)}_{br}\mathbf{b}^{(n)}+\beta^{(n)}_{br}.\end{aligned}\]</span></p>
+                                                <p>In all cases, weights are initialized following a uniform distribution <span class="math inline">\(\mathcal{U}(-0.1, 0.1)\)</span></p>
+                                                <h2 id="structural-modularity">Structural modularity</h2>
+                                                <p>We define the fraction of connections between two sub-networks as <span class="math inline">\(p\in[1/N^2,1]\)</span>. The same fraction of connections is used in each direction. The smallest value is <span class="math inline">\(p=1/N^2\)</span> corresponding to a single connection in each direction, and the largest fraction <span class="math inline">\(p=1\)</span> corresponds to <span class="math inline">\(N^2\)</span> connections in each direction (all-to-all connectivity).</p>
+                                                <p>We adapt the <span class="math inline">\(Q\)</span> metric for structural modularity <span class="citation" data-cites="Newman_2006">(Newman 2006)</span> to a directed graph: <span class="math display">\[\label{eq:Q-def}
+                                                    Q = \frac{1}{M}\sum_{ij}(A_{ij}-P_{ij})\delta_{g_ig_j},\]</span> where <span class="math inline">\(M\)</span> is the total number of edges in the network, <span class="math inline">\(A\)</span> is the adjacency matrix, <span class="math inline">\(\delta\)</span> is the Kronecker delta, <span class="math inline">\(g_i\)</span> is the group index of node <span class="math inline">\(i\)</span>, and <span class="math inline">\(P_{ij}\)</span> is the probability of a connection between nodes <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> if we randomized the edges respecting node degrees. For our network, we can analytically compute (<a href="#sec:appendix" data-reference-type="ref" data-reference="sec:appendix">6</a>): <span class="math display">\[\label{eq:Q}
+                                                    Q=\frac{1}{2}\cdot\frac{1-p}{1+p}.\]</span> This varies from <span class="math inline">\(Q=0\)</span> when <span class="math inline">\(p=1\)</span> (all nodes connected, so no modularity) to <span class="math inline">\(Q=1/2\)</span> for <span class="math inline">\(p=0\)</span> (no connections between the sub-networks, so perfect modularity). Note that for <span class="math inline">\(g\)</span> equally sized groups in a network, the maximum value that <span class="math inline">\(Q\)</span> can attain is <span class="math inline">\(1-1/g\)</span>.</p>
+                                                <h2 id="training">Training</h2>
+                                                <p>The sub-networks are trained with gradient descent using the ADADELTA <span class="citation" data-cites="zeiler2012adadelta">(Zeiler 2012)</span> optimizer. The sparse connections in-between sub-networks are trained using the Deep-R algorithm <span class="citation" data-cites="bellec2018deep">(Bellec et al. 2018)</span>. Each weight is assigned a constant sign <span class="math inline">\(s_{ij}\)</span> and a associated parameter <span class="math inline">\(\phi_{ij}\)</span>. Any weight <span class="math inline">\(w_{ij}\)</span> is considered active only if the corresponding parameter <span class="math inline">\(\phi_{ij} &gt;0\)</span>. If not the weight is said to be dormant. For non-negative <span class="math inline">\(\phi_{ij}\)</span>, the corresponding weight is thus given by <span class="math inline">\(w_{ij} = s_{ij}\phi_{ij}\)</span>. For others, weights are set to 0. Ensuring sparsity of the weight matrix comes from ensuring that only the desired number of values of <span class="math inline">\(\mathbf{\phi}\)</span> are positive at all times. We start with the desired number of positive parameters based on the sparsity <span class="math inline">\(p\)</span>, picked at random. Only those parameters then undergo a gradient descent step, using a separate ADAM optimizer <span class="citation" data-cites="kingma2017adam">(Kingma and Ba 2017)</span>, followed by a random walk step. Whenever one of these becomes negative, effectively setting its weight to 0, we pick at random a new one to become positive. This ensures that only the desired number of weights is active at all times. The gradient descent reinforces important weights by increasing their corresponding parameters. The random walk in parameter space continuously explores possible connection patterns and allows the network to ’rewire’ in case of changing objectives. Effectively, the parameter responsible for the random walk is annealed from its initial value to 0 when <span class="math inline">\(p\)</span> goes from 0 to 1. Note that our results are not substantially changed if we remove the random walk exploration but we found that Deep-R greatly improves performances at very high sparsities.</p>
+                                                <h1 id="sec:measures">Functional modularity</h1>
+                                                <p>Defining functional modularity is challenging. We want to capture the notion that a sub-network is capable of doing a sub-task independently, which we call functional specialization. However, if that network has never been trained directly on the sub-task, and has always had input from neurons outside the sub-network, it is unlikely to be able to do so without some re-training, which changes the function of the sub-network. We considered three ways of addressing this issue, leading to three quantitative measures of specialization, described below. None of the measures are, individually, entirely satisfactory. However, we show in <a href="#sec:results" data-reference-type="ref" data-reference="sec:results">4</a> that all three measures qualitatively agree, suggesting that despite potential individual problems with these measures, they are measuring something meaningful.</p>
+                                                <p>We first define three separate metrics, and then give a standard normalization to turn them into comparable specialization measures in <a href="#sec:spe-measure" data-reference-type="ref" data-reference="sec:spe-measure">3.4</a>.</p>
+                                                <h2 id="bottleneck-metric">Bottleneck metric</h2>
+                                                <p>One straightforward approach to measuring specialization of a sub-network on a particular sub-task would be to directly evaluate how well it performs on that sub-task. In our case, that would be monitoring individual performance of sub-networks when asked to predict either their own or the other sub-network’s corresponding digits. However, without modification of the network, the sub-networks would continue to predict digits based on the global parity as they were initially trained to do. Re-training only the linear readout of sub-networks while leaving the recurrent weights fixed allows for good performance on this sub-task. However, due to the simplicity of the task, re-training the whole hidden state to output readout is sufficiently powerful to allow for excellent performance even if the recurrent weights are random and untrained, so this cannot measure anything meaningful about the trained weights. The issue is that the full state of the sub-network contains a large amount of information about the original stimulus, and not just the result of any computations carried out by the sub-network, which is the part we are interested in.</p>
+                                                <p>To effectively constrain the amount of information readily available to the readout layer, we introduced a narrow bottleneck of only 5 neurons in the architecture, between the sub-network and the readout (<a href="#fig:bottleneck-archi" data-reference-type="ref" data-reference="fig:bottleneck-archi">2</a>). The state of the bottleneck neurons is sufficient to carry all the information about the digit class but insufficient to represent much information about the stimulus itself. Re-training the bottleneck-output readout then provides us with a measure of performance of the sub-network on the sub-task of classifying the digit. This approach was inspired by the concept of the information bottleneck <span class="citation" data-cites="IB_Thisby">(Tishby and Zaslavsky 2015)</span> as it minimizes the mutual information between the bottleneck state and the stimulus, while maximizing the mutual information between the bottleneck state and the digit class.</p>
+                                                <p>Concretely, for sub-network <span class="math inline">\(n\)</span> on sub-task <span class="math inline">\(k\)</span>, the bottleneck metric <span class="math inline">\(\mathcal{M}(n,k)\)</span> is the mean accuracy after:</p>
+                                                <ol>
+                                                <li><p>Training the network on the main task.</p></li>
+                                                <li><p>Freezing all parameters except the weights <span class="math inline">\(W_{br}^{(n)}\)</span> and biases <span class="math inline">\(\beta_{br}^{(n)}\)</span> between the bottleneck and readout of sub-network <span class="math inline">\(n\)</span>.</p></li>
+                                                <li><p>Re-initializing and retraining only those weights and biases on the task of recognizing digit <span class="math inline">\(k\)</span>.</p></li>
+                                                </ol>
+                                                <h2 id="weight-mask-metric">Weight mask metric</h2>
+                                                <p>Another promising approach to measure specialization comes from the recently discovered idea of weight masking. In order to determine which weights contribute to which part of the overall computation of a network, a binary mask is applied onto the network’s weights, effectively setting most of them to 0. This mask is trained to maximize performance of the masked network on a target objective, while the actual values of weights remain frozen. This idea was applied to find high performing sub-networks of randomly initialized networks <span class="citation" data-cites="frankle2019lottery ramanujan2020whats">(Frankle and Carbin 2019; Ramanujan et al. 2020)</span> and more recently to quantify functional modularity <span class="citation" data-cites="csordas2021neural">(Csordás, Steenkiste, and Schmidhuber 2021)</span>. Our method is similar to this latter approach but uses a different algorithm <span class="citation" data-cites="ramanujan2020whats">(Ramanujan et al. 2020)</span> to train and discover the masks, and does not exploit the resulting masks in the same manner. The masks are trained as follows: each weight is fixed but is attributed a differentiable score, with only the top <span class="math inline">\(q\%\)</span> scoring weights being used in the forward pass. The training of the mask consists of adjusting those scores to maximize the performance of the masked network on the desired objective. Once a mask is discovered for a particular sub-task, the analysis of the performance of the masks, what weights are retained and the attributions of those weights among the sub-networks serve as metrics for specialization.</p>
+                                                <p>It should be noted that binary weight masks can be used to discover high performing sub-networks even in randomly initialized networks (supermasks). We verified that the performance of the discovered masks were substantially better when applied to already trained networks, confirming that these could indeed be used to measure specialization.</p>
+                                                <p>The weight mask metric of sub-network <span class="math inline">\(n\)</span> on sub-task <span class="math inline">\(k\)</span> is the proportion of weights, after training of the weight mask on predicting digit <span class="math inline">\(k\)</span>, that are present in sub-network <span class="math inline">\(n\)</span>. Let <span class="math inline">\(\theta=\theta^0\cup\theta^1\)</span> to be the set of parameters of the whole network trained on the full task, where <span class="math inline">\(\theta^n\)</span> are the parameters in sub-network <span class="math inline">\(n\)</span>. We define <span class="math inline">\(\mathcal{S}^{q}_k\subseteq\theta\)</span> to be the subset of parameters selected by a mask trained on predicting digit <span class="math inline">\(k\)</span> using only <span class="math inline">\(q\%\)</span> of parameters from <span class="math inline">\(\theta\)</span>. The weight mask metric is then defined as follows, where <span class="math inline">\(|\cdot|\)</span> indicates cardinality: <span class="math display">\[\mathcal{M}(n, k) = \frac{|\mathcal{S}^{q}_k\cap\theta^n|}{|\mathcal{S}^{q}_k|} = \frac{|\mathcal{S}^{q}_k\cap\theta^n|}{q|\theta|}\]</span></p>
+                                                <p>In this work, the weight mask is not applied to input weights <span class="math inline">\(W_{ih}\)</span> and biases <span class="math inline">\(\beta_{ih}\)</span>. We chose <span class="math inline">\(q\)</span> to be as high as possible while ensuring <span class="math inline">\(\mathcal{M}(n, n) = 1\)</span> in the most extreme case of sparsity. In our case, this led to selecting 5% of the total model’s weights, <span class="math inline">\(q = 0.05\)</span>. We also ensured that this value still led to good performance in the masks discovered.</p>
+                                                <h2 id="correlation-metric">Correlation metric</h2>
+                                                <p>Our final approach is to directly examine hidden layers’ activities, and how each sub-network’s activity depends on each digit. One way of doing this is to examine the correlation of hidden states of sub-networks when only varying a single digit out of the input pair. A sub-network highly specialized on its corresponding digit should exhibit high correlation between states corresponding to inputs where only the second, irrelevant digit is varying. To measure the correlation we simply used the mean Pearson correlation coefficient.</p>
+                                                <p>For sub-network <span class="math inline">\(n\)</span> on sub-task <span class="math inline">\(k\)</span>, we compute the mean Pearson correlation coefficient between the hidden states of sub-network <span class="math inline">\(n\)</span> for pairs of examples <span class="math inline">\(x\)</span> and <span class="math inline">\(x^\prime\)</span> where digit <span class="math inline">\(k\)</span> of the two examples is the same. Writing <span class="math inline">\(\mathop{\mathrm{corr}}(x,y)\)</span> for the Pearson correlation coefficient of vectors <span class="math inline">\(x\)</span> and <span class="math inline">\(y\)</span>:</p>
+                                                <p><span class="math display">\[\mathcal{M}(n, k)=\mathbb{E}_{x, x^\prime}[\;\mathop{\mathrm{corr}}(h_n(x), h_n(x^\prime)\;|\;\mbox{digit $k$ of $x$ $=$ digit $k$ of $x^\prime$}\;].\]</span></p>
+                                                <h2 id="sec:spe-measure">Specialization Measure</h2>
+                                                <p>We have now defined our three metrics. Each of those is applied to each sub-network for each sub-task. We write <span class="math inline">\(\mathcal{M}(n, k)\)</span> for a metric of sub-network <span class="math inline">\(n\)</span> on task <span class="math inline">\(k\)</span>. Our specialization measure is then defined as</p>
+                                                <p><span class="math display">\[\mathcal{M}_{spec}(n) = \frac{\mathcal{M}(n,n)-\mathcal{M}(n,1-n)}{\mathcal{M}(n,n)+\mathcal{M}(n,1-n)}.\]</span></p>
+                                                <p>So <span class="math inline">\(\mathcal{M}(n,n)\)</span> is sub-network <span class="math inline">\(n\)</span> on the task of recognizing its own digit, and <span class="math inline">\(\mathcal{M}(n,1-n)\)</span> is sub-network <span class="math inline">\(n\)</span> recognizing the digit of the other sub-network. This specialization measure can range from 1, which corresponds to a fully specialized sub-network on its corresponding sub-task, to -1, which indicates full specialization on the other sub-network’s corresponding sub-task.</p>
+                                                <h1 id="sec:results">Results</h1>
+                                                <p>shows how each of the three measures of functional specialization discussed in <a href="#sec:measures" data-reference-type="ref" data-reference="sec:measures">3</a> varies with the structural modularity of the network, measured either with the sparsity <span class="math inline">\(p\)</span> (left) or with the <span class="math inline">\(Q\)</span> modularity measure (right). In each case, the qualitative pattern is the same: a sparser, more structurally modular network leads to a greater degree of functional specialization. This is reassuring in two senses.</p>
+                                                <p>Firstly, it shows that our three very different measures of functional specialization qualitatively agree, suggesting they are measuring something meaningful. Secondly, it shows that as we would hope, imposing structural modularity is sufficient to induce functional modularity.</p>
+                                                <p>However, we also note that only extreme levels of sparsity or structural modularity lead to a high degree of functional specialization across all three measures. For the bottleneck and correlation metrics, we require <span class="math inline">\(Q&gt;0.49\)</span> (or sparsity <span class="math inline">\(p&lt;0.01\)</span>) before we start to see a rise in functional specialization. Note that the highest value possible for <span class="math inline">\(Q\)</span> is 0.5 when there are only two equally-sized sub-networks. This trend is less extreme for the weight mask metric, where we start to see a rise from the start, but functional specialization according to this measure still depends strongly non-linearly on structural modularity, without substantially increasing until around <span class="math inline">\(Q&gt;0.4\)</span> (<span class="math inline">\(p&lt;0.11\)</span>).</p>
+                                                <p>In other words, across all measures, a high degree of structural modularity (e.g. <span class="math inline">\(Q=0.35\)</span>) is consistent with little to no functional specialization.</p>
+                                                <figure>
+                                                <img src="imgs/Final Plots.png" id="fig:specialisation" class="figureImage"/><figcaption aria-hidden="true">Functional specialization of sub-networks for different degrees of structural modularity. Each row shows one of the three measures of functional specialization defined in <a href="#sec:measures" data-reference-type="ref" data-reference="sec:measures">3</a>. The data shown is the same on the left and right columns, only the horizontal axis changes. On the left, we show the degree of sparsity between the two sub-networks on a logarithmic scale. On the right, we show the widely used <span class="math inline">\(Q\)</span> modularity measure. Lines indicate means and shaded regions indicate one standard deviation around the mean over 10 repeats.</figcaption>
+                                                </figure>
+                                                <h1 id="sec:discussion">Discussion</h1>
+                                                <p>We have demonstrated two substantial results. The first is that, by using a carefully hand crafted example it is possible to systematically relate structural and functional modularity. We showed that three entirely different measures of functional specialization qualitatively agree in this case. This allows us some confidence that these measures do reflect an important underlying property of these networks, even if individually they have limitations (see below). Furthermore, each measure of functional modularity increases monotonically with increasing levels of structural modularity. This reassuringly matches our intuition.</p>
+                                                <p>The second result, however, is that we require a very high degree of structural modularity to ensure functional modularity. Or, put another way, a moderately high degree of structural modularity can be seen in a network that has almost no functional modularity whatsoever. This has implications both for the design of artificial networks and for the analysis of biological networks.</p>
+                                                <p>For designing networks, it means that imposing a moderate degree of structural modularity is unlikely to be sufficient, on its own, to ensure any degree of functional modularity. If we want functional modularity, we either need to use extreme levels of structural modularity, imposed via very sparse connections between sub-networks, or – perhaps better – we need to use other methods to induce this functional modularity.</p>
+                                                <p>In terms of analyzing biological data, our results demonstrate that we should not conclude any degree of functional modularity simply by observing a moderate degree of structural modularity. This potentially poses problems for approaches such as connectomics <span class="citation" data-cites="sporns_human_2005">(Sporns, Tononi, and Kötter 2005)</span>, which assume that knowing the structural properties of networks will give us good constraints on their functional properties.</p>
+                                                <p>Despite good qualitative agreement between the measures of functional modularity, each one individually has significant limitations individually. In both bottleneck and weight-mask measures, for example, we effectively retrain part of the network to perform a sub-task, and this training requires making choices of parameters such as learning rate, number of epochs, etc. The resulting metric depends on these choices.</p>
+                                                <p>Another limitation of our findings comes from the task design. In order to easily witness and measure specialization, we designed a simple global task that could decompose into sub-tasks. The information that needs to be transmitted between the sub-networks, however, is minimal (a single bit). This could explain why we only see specialization at extreme levels of sparsity. An interesting future work would be to craft a global task where the amount of information transmission needed among sub-networks in order to solve the task could be independently controlled. We could then examine how the relationship between sparsity (structural modularity) and specialization (functional modularity) depends on the required communication bandwidth. Would it shift, but preserve the overall pattern?</p>
+                                                <p>In the end modularity is really like beauty in art. If you give it time, and different perspectives, you can start to discern its ever-changing shape.</p>
+                                                <h1 id="sec:appendix">Appendix</h1>
+                                                <h2 id="q-measure-derivation">Q measure derivation</h2>
+                                                <p><span class="citation" data-cites="Newman_2006">(Newman 2006)</span> defines the modularity measure <span class="math inline">\(Q\)</span> for an undirected graph. We modify the definition for a directed graph as: <span class="math display">\[
+                                                    Q = \frac{1}{M}\sum_{ij}(A_{ij}-P_{ij})\delta_{g_ig_j} = \frac{1}{M}\sum_{ij}\left(A_{ij}-\frac{k_i^{out}k_j^{in}}{M}\right)\delta_{g_ig_j}\]</span> where <span class="math inline">\(M\)</span> is the total number of edges in the network, <span class="math inline">\(A\)</span> is the adjacency matrix, <span class="math inline">\(\delta\)</span> is the Kronecker delta, <span class="math inline">\(g_i\)</span> is the group index of node <span class="math inline">\(i\)</span>, <span class="math inline">\(k_i^{out}/k_j^{in}\)</span> are the out-degree/in-degree of node <span class="math inline">\(i/j\)</span> respectively, used to compute <span class="math inline">\(P_{ij}\)</span>: the probability of a connection between nodes <span class="math inline">\(i\)</span> and <span class="math inline">\(j\)</span> if we randomized the edges respecting node degrees. For our network, we have 2 sub-networks (with group index 0 and 1 respectively) of N neurons, densely connected, with p% active inter-connections between the two. From this we get: <span class="math display">\[\begin{aligned}
+                                                    &amp;M = 2N^2(1+p) 
+                                                    \\ &amp;\forall i \in [1, 2N], \quad g_i = 
+                                                    \begin{cases}
+                                                    0,&amp; \text{if } i \in [0, N-1]\\
+                                                    1,              &amp; \text{if } i \in [N, 2N]
+                                                    \end{cases}
+                                                    \\ &amp;\forall(i,j) \in [0, 2N]^2, \quad A_{i,j} = 
+                                                    \begin{cases}
+                                                    1,&amp; \text{if } \delta_{g_ig_j} = 1\\
+                                                    0 \text{ or } 1,              &amp; \text{if } \delta_{g_ig_j} = 0
+                                                    \end{cases}
+                                                    \\ &amp;\forall(i,j) \in [0, 2N]^2, \quad
+                                                    \begin{cases}
+                                                    k_i^{out} = \sum_{j&#39;}A_{ij&#39;} \approx N(1+p)
+                                                    \\ k_j^{in} = \sum_{i&#39;}A_{i&#39;j} \approx N(1+p)
+                                                    \end{cases}
+                                                    \\ \text{And} \quad
+                                                    &amp;\begin{cases}
+                                                    \sum_{i}k_i^{out} = \sum_{i}\sum_{j&#39;}A_{ij&#39;} = N^2(1+p)
+                                                    \\ \sum_{j}k_j^{in} = \sum_{j}\sum_{i&#39;}A_{i&#39;j} = N^2(1+p)
+                                                    \end{cases}
+                                                    \\ \text{Thus : } &amp;Q = \frac{1}{2N^2(1+p)}\sum_{ij}\left (A_{ij} - \frac{(1+p)}{2}\right)\delta_{g_ig_j} 
+                                                    \\&amp;Q= \frac{1}{2N^2(1+p)}(2N^2)\left(1 - \frac{(1+p)}{2}\right)
+                                                    \\ &amp;\boxed{Q= \frac{1-p}{2(1+p)}}\end{aligned}\]</span></p>
+                                                <h2 id="training-parameters">Training parameters</h2>
+                                                <p>Here we present all training parameters used in the global model training (parity task), the discovery of the weight masks and the bottleneck-readout retraining. When two optimizers or learning rates are specified, they correspond to the parameters for the sub-networks/sparse-connections respectively. When a parameters is indicated as a range, it was geometrically decreased in between the two bounds when inter-connections sparsity spanned from 0 to 1. In the case of the global training, we had to train both architectures (<a href="#fig:archi,fig:bottleneck-archi" data-reference-type="ref" data-reference="fig:archi,fig:bottleneck-archi">[fig:archi,fig:bottleneck-archi]</a>), we thus indicates parameters (bottleneck size and number of epochs) for the absence/presence of the bottleneck.</p>
+                                                <table>
+                                                <caption>Network and training parameters</caption>
+                                                <thead>
+                                                <tr class="header">
+                                                <th style="text-align: left;"></th>
+                                                <th style="text-align: left;">Global training</th>
+                                                <th style="text-align: left;">Mask training</th>
+                                                <th style="text-align: left;">Bottleneck re-training</th>
+                                                </tr>
+                                                </thead>
+                                                <tbody>
+                                                <tr class="odd">
+                                                <td style="text-align: left;">Number of sub-networks</td>
+                                                <td style="text-align: left;"><span class="math inline">\(2\)</span></td>
+                                                <td style="text-align: left;"><span class="math inline">\(2\)</span></td>
+                                                <td style="text-align: left;"><span class="math inline">\(2\)</span></td>
+                                                </tr>
+                                                <tr class="even">
+                                                <td style="text-align: left;">Number of input neurons</td>
+                                                <td style="text-align: left;"><span class="math inline">\(2*784\)</span></td>
+                                                <td style="text-align: left;"><span class="math inline">\(2*784\)</span></td>
+                                                <td style="text-align: left;"><span class="math inline">\(2*784\)</span></td>
+                                                </tr>
+                                                <tr class="odd">
+                                                <td style="text-align: left;">Number of hidden neurons</td>
+                                                <td style="text-align: left;"><span class="math inline">\(2*100\)</span></td>
+                                                <td style="text-align: left;"><span class="math inline">\(2*100\)</span></td>
+                                                <td style="text-align: left;"><span class="math inline">\(2*100\)</span></td>
+                                                </tr>
+                                                <tr class="even">
+                                                <td style="text-align: left;">Bottleneck size</td>
+                                                <td style="text-align: left;">-/5</td>
+                                                <td style="text-align: left;">-</td>
+                                                <td style="text-align: left;"><span class="math inline">\(5\)</span></td>
+                                                </tr>
+                                                <tr class="odd">
+                                                <td style="text-align: left;">Number of classes</td>
+                                                <td style="text-align: left;"><span class="math inline">\(10\)</span></td>
+                                                <td style="text-align: left;"><span class="math inline">\(10\)</span></td>
+                                                <td style="text-align: left;"><span class="math inline">\(10\)</span></td>
+                                                </tr>
+                                                <tr class="even">
+                                                <td style="text-align: left;">Number epochs</td>
+                                                <td style="text-align: left;"><span class="math inline">\(5/7\)</span></td>
+                                                <td style="text-align: left;"><span class="math inline">\(1\)</span></td>
+                                                <td style="text-align: left;"><span class="math inline">\(5\)</span></td>
+                                                </tr>
+                                                <tr class="odd">
+                                                <td style="text-align: left;">Optimizer</td>
+                                                <td style="text-align: left;">Adadelta/Adam</td>
+                                                <td style="text-align: left;">SGD</td>
+                                                <td style="text-align: left;">Adadelta</td>
+                                                </tr>
+                                                <tr class="even">
+                                                <td style="text-align: left;">Learning rate</td>
+                                                <td style="text-align: left;"><span class="math inline">\(0.5/[0.1-0.01]\)</span></td>
+                                                <td style="text-align: left;"><span class="math inline">\(0.1\)</span></td>
+                                                <td style="text-align: left;"><span class="math inline">\(0.5\)</span></td>
+                                                </tr>
+                                                <tr class="odd">
+                                                <td style="text-align: left;">Betas</td>
+                                                <td style="text-align: left;"><span class="math inline">\(0.9/0.95\)</span></td>
+                                                <td style="text-align: left;">-</td>
+                                                <td style="text-align: left;"><span class="math inline">\(0.9\)</span></td>
+                                                </tr>
+                                                </tbody>
+                                                </table>
+                                                <h2 id="raw-metrics">Raw metrics</h2>
+                                                <p>In order to measure specialization, we used a normalized difference between sub-tasks over three different metrics. This difference however isn’t a fool-proof way to arrive at out measure. No matter the raw performance of a sub-network for a given metric, if it achieves the same for both sub-tasks then our specialization measure is equal to 0. The question that a sub-network performing perfectly for both sub-task should get the same measure as one performing very poorly on both is thus open. Fortunately this was not the case as shown in the raw metrics (<a href="#fig:raw_metrics" data-reference-type="ref" data-reference="fig:raw_metrics">4</a>), and the quantity we measured is meaningful. We also show the results of the correlation metric when using the CKA distance <span class="citation" data-cites="kornblith2019similarity">(Kornblith et al. 2019)</span> (note that this metric is defined as a distance, i.e. 0 when highly correlated).</p>
+                                                <figure>
+                                                <img src="imgs_supp/raw_metrics.png" id="fig:raw_metrics" class="figureImage"/><figcaption aria-hidden="true">Raw metrics.</figcaption>
+                                                </figure>
+                                                <h2 id="global-model-performance">Global model performance</h2>
+                                                <p>In this study, we measure the specialization of sub-networks for varying sparsity of inter-connections. It is to be noted that this specialization depends on the overall performance of the global model, which in turns should depend on said sparsity of connections. We made sure that every trained model showed good performance so that measures on functional modularity were meaningful (<a href="#fig:global_perf" data-reference-type="ref" data-reference="fig:global_perf">5</a>).</p>
+                                                <figure>
+                                                <img src="imgs_supp/global_perf.png" id="fig:global_perf" class="figureImage"/><figcaption aria-hidden="true">Trained models performance on global task.</figcaption>
+                                                </figure>
+                                                <div id="refs" class="references csl-bib-body hanging-indent" role="doc-bibliography">
+                                                <div id="ref-Amer_2019" class="csl-entry" role="doc-biblioentry">
+                                                Amer, Mohammed, and Tomás Maul. 2019. <span>“A Review of Modularization Techniques in Artificial Neural Networks.”</span> <em>Artificial Intelligence Review</em> 52 (1): 527–61. <a href="https://doi.org/10.1007/s10462-019-09706-7">https://doi.org/10.1007/s10462-019-09706-7</a>.
+                                                </div>
+                                                <div id="ref-bellec2018deep" class="csl-entry" role="doc-biblioentry">
+                                                Bellec, Guillaume, David Kappel, Wolfgang Maass, and Robert Legenstein. 2018. <span>“Deep Rewiring: Training Very Sparse Deep Networks.”</span> <a href="https://arxiv.org/abs/1711.05136">https://arxiv.org/abs/1711.05136</a>.
+                                                </div>
+                                                <div id="ref-bullmore_brain_2011" class="csl-entry" role="doc-biblioentry">
+                                                Bullmore, Edward T., and Danielle S. Bassett. 2011. <span>“Brain <span>Graphs</span>: <span>Graphical</span> <span>Models</span> of the <span>Human</span> <span>Brain</span> <span>Connectome</span>.”</span> <em>Annual Review of Clinical Psychology</em> 7 (1): 113–40. <a href="https://doi.org/10.1146/annurev-clinpsy-040510-143934">https://doi.org/10.1146/annurev-clinpsy-040510-143934</a>.
+                                                </div>
+                                                <div id="ref-chen_revealing_2008" class="csl-entry" role="doc-biblioentry">
+                                                Chen, Zhang J., Yong He, Pedro Rosa-Neto, Jurgen Germann, and Alan C. Evans. 2008. <span>“Revealing Modular Architecture of Human Brain Structural Networks by Using Cortical Thickness from <span>MRI</span>.”</span> <em>Cerebral Cortex (New York, N.Y.: 1991)</em> 18 (10): 2374–81. <a href="https://doi.org/10.1093/cercor/bhn003">https://doi.org/10.1093/cercor/bhn003</a>.
+                                                </div>
+                                                <div id="ref-Clune_2013" class="csl-entry" role="doc-biblioentry">
+                                                Clune, Jeff, Jean-Baptiste Mouret, and Hod Lipson. 2013. <span>“The Evolutionary Origins of Modularity.”</span> <em>Proceedings of the Royal Society B: Biological Sciences</em> 280 (1755): 20122863. <a href="https://doi.org/10.1098/rspb.2012.2863">https://doi.org/10.1098/rspb.2012.2863</a>.
+                                                </div>
+                                                <div id="ref-csordas2021neural" class="csl-entry" role="doc-biblioentry">
+                                                Csordás, Róbert, Sjoerd van Steenkiste, and Jürgen Schmidhuber. 2021. <span>“Are Neural Nets Modular? Inspecting Functional Modularity Through Differentiable Weight Masks.”</span> <a href="https://arxiv.org/abs/2010.02066">https://arxiv.org/abs/2010.02066</a>.
+                                                </div>
+                                                <div id="ref-ellefsen_neural_2015" class="csl-entry" role="doc-biblioentry">
+                                                Ellefsen, Kai Olav, Jean-Baptiste Mouret, and Jeff Clune. 2015. <span>“Neural <span>Modularity</span> <span>Helps</span> <span>Organisms</span> <span>Evolve</span> to <span>Learn</span> <span>New</span> <span>Skills</span> Without <span>Forgetting</span> <span>Old</span> <span>Skills</span>.”</span> <em>PLOS Computational Biology</em> 11 (4): e1004128. <a href="https://doi.org/10.1371/journal.pcbi.1004128">https://doi.org/10.1371/journal.pcbi.1004128</a>.
+                                                </div>
+                                                <div id="ref-filan_clusterability_2021" class="csl-entry" role="doc-biblioentry">
+                                                Filan, Daniel, Stephen Casper, Shlomi Hod, Cody Wild, Andrew Critch, and Stuart Russell. 2021. <span>“Clusterability in <span>Neural</span> <span>Networks</span>.”</span> <em>arXiv:2103.03386 [Cs]</em>, March. <a href="http://arxiv.org/abs/2103.03386">http://arxiv.org/abs/2103.03386</a>.
+                                                </div>
+                                                <div id="ref-frankle2019lottery" class="csl-entry" role="doc-biblioentry">
+                                                Frankle, Jonathan, and Michael Carbin. 2019. <span>“The Lottery Ticket Hypothesis: Finding Sparse, Trainable Neural Networks.”</span> <a href="https://arxiv.org/abs/1803.03635">https://arxiv.org/abs/1803.03635</a>.
+                                                </div>
+                                                <div id="ref-kashtan_spontaneous_2005" class="csl-entry" role="doc-biblioentry">
+                                                Kashtan, Nadav, and Uri Alon. 2005. <span>“Spontaneous Evolution of Modularity and Network Motifs.”</span> <em>Proceedings of the National Academy of Sciences</em> 102 (39): 13773–78. <a href="https://doi.org/10.1073/pnas.0503610102">https://doi.org/10.1073/pnas.0503610102</a>.
+                                                </div>
+                                                <div id="ref-kingma2017adam" class="csl-entry" role="doc-biblioentry">
+                                                Kingma, Diederik P., and Jimmy Ba. 2017. <span>“Adam: A Method for Stochastic Optimization.”</span> <a href="https://arxiv.org/abs/1412.6980">https://arxiv.org/abs/1412.6980</a>.
+                                                </div>
+                                                <div id="ref-kornblith2019similarity" class="csl-entry" role="doc-biblioentry">
+                                                Kornblith, Simon, Mohammad Norouzi, Honglak Lee, and Geoffrey Hinton. 2019. <span>“Similarity of Neural Network Representations Revisited.”</span> <a href="https://arxiv.org/abs/1905.00414">https://arxiv.org/abs/1905.00414</a>.
+                                                </div>
+                                                <div id="ref-lecun-mnisthandwrittendigit-2010" class="csl-entry" role="doc-biblioentry">
+                                                LeCun, Yann, and Corinna Cortes. 2010. <span>“<span>MNIST</span> Handwritten Digit Database.”</span> <a href="http://yann.lecun.com/exdb/mnist/">http://yann.lecun.com/exdb/mnist/</a>.
+                                                </div>
+                                                <div id="ref-meunier_age-related_2009" class="csl-entry" role="doc-biblioentry">
+                                                Meunier, David, Sophie Achard, Alexa Morcom, and Ed Bullmore. 2009. <span>“Age-Related Changes in Modular Organization of Human Brain Functional Networks.”</span> <em>NeuroImage</em> 44 (3): 715–23. <a href="https://doi.org/10.1016/j.neuroimage.2008.09.062">https://doi.org/10.1016/j.neuroimage.2008.09.062</a>.
+                                                </div>
+                                                <div id="ref-mountcastle_columnar_1997" class="csl-entry" role="doc-biblioentry">
+                                                Mountcastle, V. B. 1997. <span>“The Columnar Organization of the Neocortex.”</span> <em>Brain: A Journal of Neurology</em> 120 ( Pt 4) (April): 701–22. <a href="https://doi.org/10.1093/brain/120.4.701">https://doi.org/10.1093/brain/120.4.701</a>.
+                                                </div>
+                                                <div id="ref-Newman_2006" class="csl-entry" role="doc-biblioentry">
+                                                Newman, M. E. J. 2006. <span>“Modularity and Community Structure in Networks.”</span> <em>Proceedings of the National Academy of Sciences</em> 103 (23): 8577–82. <a href="https://doi.org/10.1073/pnas.0601602103">https://doi.org/10.1073/pnas.0601602103</a>.
+                                                </div>
+                                                <div id="ref-ramanujan2020whats" class="csl-entry" role="doc-biblioentry">
+                                                Ramanujan, Vivek, Mitchell Wortsman, Aniruddha Kembhavi, Ali Farhadi, and Mohammad Rastegari. 2020. <span>“What’s Hidden in a Randomly Weighted Neural Network?”</span> <a href="https://arxiv.org/abs/1911.13299">https://arxiv.org/abs/1911.13299</a>.
+                                                </div>
+                                                <div id="ref-redies_modularity_2001" class="csl-entry" role="doc-biblioentry">
+                                                Redies, C., and L. Puelles. 2001. <span>“Modularity in Vertebrate Brain Development and Evolution.”</span> <em>BioEssays</em> 23 (12): 1100–1111. <a href="https://doi.org/10.1002/bies.10014">https://doi.org/10.1002/bies.10014</a>.
+                                                </div>
+                                                <div id="ref-sak2014long" class="csl-entry" role="doc-biblioentry">
+                                                Sak, Haşim, Andrew Senior, and Françoise Beaufays. 2014. <span>“Long Short-Term Memory Based Recurrent Neural Network Architectures for Large Vocabulary Speech Recognition.”</span> <a href="https://arxiv.org/abs/1402.1128">https://arxiv.org/abs/1402.1128</a>.
+                                                </div>
+                                                <div id="ref-sporns_human_2005" class="csl-entry" role="doc-biblioentry">
+                                                Sporns, Olaf, Giulio Tononi, and Rolf Kötter. 2005. <span>“The <span>Human</span> <span>Connectome</span>: <span>A</span> <span>Structural</span> <span>Description</span> of the <span>Human</span> <span>Brain</span>.”</span> <em>PLOS Computational Biology</em> 1 (4): e42. <a href="https://doi.org/10.1371/journal.pcbi.0010042">https://doi.org/10.1371/journal.pcbi.0010042</a>.
+                                                </div>
+                                                <div id="ref-IB_Thisby" class="csl-entry" role="doc-biblioentry">
+                                                Tishby, Naftali, and Noga Zaslavsky. 2015. <span>“Deep Learning and the Information Bottleneck Principle.”</span> <em>2015 IEEE Information Theory Workshop, ITW 2015</em>, March. <a href="https://doi.org/10.1109/ITW.2015.7133169">https://doi.org/10.1109/ITW.2015.7133169</a>.
+                                                </div>
+                                                <div id="ref-zeiler2012adadelta" class="csl-entry" role="doc-biblioentry">
+                                                Zeiler, Matthew D. 2012. <span>“ADADELTA: An Adaptive Learning Rate Method.”</span> <a href="https://arxiv.org/abs/1212.5701">https://arxiv.org/abs/1212.5701</a>.
+                                                </div>
+                                                </div>
+            </div>
+        </div>
+        <div class="column_container">
+            <div class="column_header">
+                <b>RELATED</b><br/>
+                Click to pin
+            </div>
+            <div id="colRelated" class="column">
+            </div>
+        </div>
+        <div class="column_container">
+            <div class="column_header">
+                <b>PINNED</b><br/>
+                Click to unpin
+            </div>
+            <div id="colPinned" class="column">
+            </div>
+        </div>
+    </div>
+    <script src="threecolumnfixed.js"></script>
+        
+</body>
+</html>

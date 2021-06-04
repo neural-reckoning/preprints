@@ -1,0 +1,180 @@
+body {
+    /* font-size: 200%; */
+    font-size: 14pt;
+    margin: 0px;
+    padding: 0px;
+}
+
+.row {
+    height: 100vh;
+    /* display: flex;
+    flex-direction: row; */
+}
+
+.column {
+    /* float: left; */
+    /* width: 33%; */
+    overflow-y: auto;
+    height: 100%;
+    padding: 20px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.column_container {
+    float: left;
+    width: 33.333333333333%;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.column_header {
+    background-color: #d1defd ;
+    text-align: center;
+}
+
+.column h1 {
+    font-size: 100%;
+    text-transform: uppercase;
+    border-bottom: 1px solid black;
+}
+
+.column h2 {
+    font-size: 100%;
+    border-bottom: 1px dashed black;
+}
+
+/* Clear floats after the columns */
+.row:after {
+    content: "";
+    display: table;
+    clear: both;
+}
+
+/* Correct for a weird thing that pandoc does */
+.unnumbered span {
+    display: none;
+}
+
+.related {
+    display: none;
+    padding: 10px;
+    margin-bottom: 5px;
+    background-color: #eeeeee;
+    border-radius: 10px;
+}
+
+figure {
+    margin: 0px;
+}
+
+/* figure embed {
+    min-width: 100%;
+    min-height: 30vh;
+} */
+
+figure img {
+	width: 100%;
+}
+
+.figureImage {
+    width: 100%;
+}
+
+figcaption {
+    font-size: 75%;
+}
+
+.highlighted {
+    background-color: lightgreen;
+}
+
+/* .csl-entry {
+    font-size: 75%;
+} */
+
+/* Pinning */
+
+.related {
+    position: relative;
+}
+
+.pinIcon {
+    width: 25px;
+    height: 25px;
+    font-size: 14pt;
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    transform: rotate(45deg);
+    background-color: lightgreen;
+    border-radius: 50%;
+    border: 1px solid black;
+    text-align: center;
+    vertical-align: middle;
+    line-height: 25px;
+}
+
+.pinIcon:hover {
+    background-color: yellow;
+}
+
+.related .pinIcon {
+    opacity: 0.0;
+    transition: opacity 0.2s ease-in-out;
+}
+
+.related:hover .pinIcon {
+    opacity: 1.0;
+    transition: opacity 0.2s ease-in-out;
+}
+
+/************** STUFF FROM PANDOC'S HTML CSS *************/
+
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+/* div.csl-bib-body { } */
+div.csl-entry {
+    clear: both;
+}
+.hanging div.csl-entry {
+    margin-left:2em;
+    text-indent:-2em;
+}
+div.csl-left-margin {
+    min-width:2em;
+    float:left;
+}
+div.csl-right-inline {
+    margin-left:2em;
+    padding-left:1em;
+}
+div.csl-indent {
+    margin-left: 2em;
+}
+
+table {
+    margin: 1em 0;
+    border-collapse: collapse;
+    width: 100%;
+    overflow-x: auto;
+    display: block;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+  table caption {
+    margin-bottom: 0.75em;
+  }
+  tbody {
+    margin-top: 0.5em;
+    border-top: 1px solid #1a1a1a;
+    border-bottom: 1px solid #1a1a1a;
+  }
+  th {
+    border-top: 1px solid #1a1a1a;
+    padding: 0.25em 0.5em 0.25em 0.5em;
+  }
+  td {
+    padding: 0.125em 0.5em 0.25em 0.5em;
+  }
